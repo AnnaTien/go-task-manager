@@ -3,11 +3,13 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
 	"go-task-manager/internal/task"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
@@ -17,12 +19,31 @@ type APIHandler struct {
 	Storage task.Storage
 }
 
+// Global validator instance
+var validate *validator.Validate
+
+func init() {
+	// Initialize a new validator instance on package load.
+	validate = validator.New()
+}
+
 // AddTaskHandler handles requests to add a new task.
 func (h *APIHandler) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var t task.Task
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate the incoming task data based on the struct tags.
+	err = validate.Struct(t)
+	if err != nil {
+		// Log the validation error for debugging purposes.
+		log.Printf("Validation error: %v", err)
+
+		// Return a bad request error with a message indicating the validation failure.
+		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

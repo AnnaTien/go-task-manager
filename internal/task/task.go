@@ -8,7 +8,7 @@ import (
 // It includes GORM and JSON tags for database and API interactions.
 type Task struct {
 	gorm.Model        // GORM automatically adds ID, CreatedAt, UpdatedAt, and DeletedAt fields.
-	Name       string `gorm:"size:255;not null" json:"name"`
+	Name       string `gorm:"size:255;not null" json:"name" validate:"required,min=3,max=255"`
 	Completed  bool   `gorm:"default:false" json:"completed"`
 }
 
