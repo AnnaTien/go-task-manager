@@ -80,14 +80,16 @@ var apiCmd = &cobra.Command{
 		apiHandler := api.APIHandler{Storage: storage}
 
 		r := mux.NewRouter()
+		authRouter := r.PathPrefix("/").Subrouter()
+		authRouter.Use(middleware.AuthMiddleware)
 
 		// API routes
 		r.HandleFunc("/tasks", apiHandler.GetTasksHandler).Methods("GET")
-		r.HandleFunc("/tasks", apiHandler.AddTaskHandler).Methods("POST")
 		r.HandleFunc("/tasks/search", apiHandler.SearchTasksHandler).Methods("GET")
 		r.HandleFunc("/tasks/{id}", apiHandler.GetTaskByIDHandler).Methods("GET")
-		r.HandleFunc("/tasks/{id}", apiHandler.UpdateTaskHandler).Methods("PUT")
-		r.HandleFunc("/tasks/{id}", apiHandler.DeleteTaskHandler).Methods("DELETE")
+		authRouter.HandleFunc("/tasks", apiHandler.AddTaskHandler).Methods("POST")
+		authRouter.HandleFunc("/tasks/{id}", apiHandler.UpdateTaskHandler).Methods("PUT")
+		authRouter.HandleFunc("/tasks/{id}", apiHandler.DeleteTaskHandler).Methods("DELETE")
 
 		// Apply the middleware to the router
 		loggedRouter := middleware.LoggingMiddleware(r)
