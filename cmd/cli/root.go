@@ -2,9 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+
+	"github.com/rs/zerolog/log"
 
 	"go-task-manager/api"
 	"go-task-manager/database"
@@ -53,17 +54,17 @@ var apiCmd = &cobra.Command{
 			viper.SetConfigType("yaml")
 			viper.AddConfigPath("./configs")
 			if err := viper.ReadInConfig(); err != nil {
-				log.Fatalf("Error reading config file: %s", err)
+				log.Fatal().Err(err).Msg("Error reading config file")
 			}
 			if err := viper.Unmarshal(&config); err != nil {
-				log.Fatalf("Error unmarshalling config: %s", err)
+				log.Fatal().Err(err).Msg("Error unmarshalling config")
 			}
 		}
 
 		db := database.InitDB(config.Database.DSN)
 		err := db.AutoMigrate(&task.Task{})
 		if err != nil {
-			log.Fatal("Failed to auto migrate database:", err)
+			log.Fatal().Err(err).Msg("Failed to auto migrate database")
 		}
 
 		storage := task.NewGormStorage(db)
@@ -79,8 +80,8 @@ var apiCmd = &cobra.Command{
 		r.HandleFunc("/tasks/{id}", apiHandler.UpdateTaskHandler).Methods("PUT")
 		r.HandleFunc("/tasks/{id}", apiHandler.DeleteTaskHandler).Methods("DELETE")
 
-		log.Printf("API server started on port %s\n", config.Port)
-		log.Fatal(http.ListenAndServe(":"+config.Port, r))
+		log.Info().Msgf("API server started on port %s", config.Port)
+		log.Fatal().Err(http.ListenAndServe(":"+config.Port, r)).Msg("Server failed to start")
 	},
 }
 

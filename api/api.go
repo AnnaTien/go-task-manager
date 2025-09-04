@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +10,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -32,6 +32,7 @@ func (h *APIHandler) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var t task.Task
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to decode request body")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -40,7 +41,7 @@ func (h *APIHandler) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	err = validate.Struct(t)
 	if err != nil {
 		// Log the validation error for debugging purposes.
-		log.Printf("Validation error: %v", err)
+		log.Error().Err(err).Msg("Validation failed for task data")
 
 		// Return a bad request error with a message indicating the validation failure.
 		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
@@ -49,6 +50,7 @@ func (h *APIHandler) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	createdTask, err := h.Storage.AddTask(t)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to add task to database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -62,6 +64,7 @@ func (h *APIHandler) AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.Storage.GetTasks()
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to retrieve tasks from database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -75,6 +78,7 @@ func (h *APIHandler) GetTaskByIDHandler(w http.ResponseWriter, r *http.Request) 
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
+		log.Error().Err(err).Msg("Invalid task ID format")
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
@@ -82,9 +86,11 @@ func (h *APIHandler) GetTaskByIDHandler(w http.ResponseWriter, r *http.Request) 
 	task, err := h.Storage.GetTaskByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Msgf("Task with ID %d not found", id)
 			http.Error(w, "Task not found", http.StatusNotFound)
 			return
 		}
+		log.Error().Err(err).Msg("Failed to retrieve task from database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -98,18 +104,29 @@ func (h *APIHandler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
+		log.Error().Err(err).Msg("Invalid task ID format for update")
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	var updatedTask task.Task
 	if err := json.NewDecoder(r.Body).Decode(&updatedTask); err != nil {
+		log.Error().Err(err).Msg("Failed to decode update request body")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// We can add validation for updatedTask here as well.
+	// err = validate.Struct(updatedTask)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("Validation failed for updated task data")
+	// 	http.Error(w, "Invalid input: " + err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
 	result, err := h.Storage.UpdateTask(id, updatedTask)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to update task in database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -123,11 +140,13 @@ func (h *APIHandler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
+		log.Error().Err(err).Msg("Invalid task ID format for deletion")
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.Storage.DeleteTask(id); err != nil {
+		log.Error().Err(err).Msg("Failed to delete task from database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -139,12 +158,14 @@ func (h *APIHandler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) SearchTasksHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
+		log.Warn().Msg("Search query 'q' is missing")
 		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
 		return
 	}
 
 	tasks, err := h.Storage.SearchTasks(query)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to search tasks in database")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
