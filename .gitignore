@@ -1,0 +1,5 @@
+echo "/bin" >> .gitignore
+echo "*.exe" >> .gitignore
+echo "/vendor" >> .gitignore
+echo "/docs" >> .gitignore
+echo ".env" >> .gitignore
