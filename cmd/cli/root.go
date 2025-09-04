@@ -5,7 +5,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	// Bạn đã thêm import go-task-manager/internal/common nhưng nó không được sử dụng ở đây
+	// "go-task-manager/internal/common"
 
 	"go-task-manager/api"
 	"go-task-manager/database"
@@ -15,6 +19,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+func init() {
+	// Configure zerolog for human-readable output in development
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+}
 
 // config holds the application's configuration settings.
 var config struct {
