@@ -8,12 +8,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	// Bạn đã thêm import go-task-manager/internal/common nhưng nó không được sử dụng ở đây
-	// "go-task-manager/internal/common"
-
 	"go-task-manager/api"
 	"go-task-manager/database"
 	"go-task-manager/internal/task"
+
+	"go-task-manager/internal/middleware"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
@@ -90,8 +89,12 @@ var apiCmd = &cobra.Command{
 		r.HandleFunc("/tasks/{id}", apiHandler.UpdateTaskHandler).Methods("PUT")
 		r.HandleFunc("/tasks/{id}", apiHandler.DeleteTaskHandler).Methods("DELETE")
 
+		// Apply the middleware to the router
+		loggedRouter := middleware.LoggingMiddleware(r)
+
 		log.Info().Msgf("API server started on port %s", config.Port)
-		log.Fatal().Err(http.ListenAndServe(":"+config.Port, r)).Msg("Server failed to start")
+		// Pass the wrapped router to the server
+		log.Fatal().Err(http.ListenAndServe(":"+config.Port, loggedRouter)).Msg("Server failed to start")
 	},
 }
 
